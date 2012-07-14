@@ -76,19 +76,20 @@ void start_armboot (void)
 	misc_init_r();
 	buf =  (uchar*) CFG_LOADADDR;
 
-	int i;
-	if ((get_mem_type() == MMC_ONENAND) || (get_mem_type() == MMC_NAND)){
-		buf += mmc_boot(buf);
-	}
+	int i, size;
 
-	if (get_mem_type() == GPMC_ONENAND){
-		for (i = ONENAND_START_BLOCK; i < ONENAND_END_BLOCK; i++){
-			if (!onenand_read_block(buf, i))
-				buf += ONENAND_BLOCK_SIZE;
+	/* first try mmc */
+	if (mmc_init(1)) {
+		size = file_fat_read("u-boot.bin", buf, 0);
+		if (size > 0) {
+			printf("Loading u-boot.bin from mmc\n");
+			buf += size;
 		}
+		else printf("No u-boot.bin on mmc\n");
 	}
 
-	if (get_mem_type() == GPMC_NAND){
+	if (buf == (uchar *)CFG_LOADADDR) {
+		printf("Trying to load u-boot.bin from nand\n");
 		for (i = NAND_UBOOT_START; i < NAND_UBOOT_END; i+= NAND_BLOCK_SIZE){
 			if (!nand_read_block(buf, i))
 				buf += NAND_BLOCK_SIZE; /* advance buf ptr */
